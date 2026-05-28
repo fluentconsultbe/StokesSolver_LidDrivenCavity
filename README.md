@@ -84,9 +84,7 @@ and produces a physically consistent Stokes flow solution.
 The pressure Poisson equation forms a large sparse linear system.  
 In this solver, it is iteratively approximated using **Gauss–Seidel relaxation**, which updates each pressure value based on its neighbours:
 
-$$p_{i,j}^{(k+1)} = \frac{1}{4} \left( p_{i+1,j}^{(k)} + p_{i-1,j}^{(k)} + p_{i,j+1}^{(k)} + p_{i,j-1}^{(k)}
-
-- h^2\hspace{2pt} \text{rhs}_{i,j} \right)$$
+$$p_{i,j}^{(k+1)} = \frac{1}{4} ( p_{i+1,j}^{(k)} + p_{i-1,j}^{(k)} + p_{i,j+1}^{(k)} + p_{i,j-1}^{(k)} - h^2\hspace{2pt} \text{rhs}_{i,j})$$
 
 where:
 
