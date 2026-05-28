@@ -1,98 +1,205 @@
-﻿// StokesSolver.cpp : Defines the entry point for the application.
-//
-
-#include "StokesSolver.h"
-
-#include <vector>
+﻿#include <vector>
 #include <cmath>
 #include <iostream>
 
-// A Simple Squared Field.
-struct Field 
+struct Field
 {
     int nx, ny;
     double dx, dy;
     std::vector<double> data;
 
-    Field(
-        int nx_, 
-        int ny_, 
-        double Lx, 
-        double Ly
-        )
-        : 
-        nx( nx_), 
-        ny( ny_), 
-        dx( Lx / (nx_ - 1)), 
-        dy( Ly / (ny_ - 1)), 
-        data( nx_* ny_, 0.0)
+    Field(int nx_, int ny_, double Lx, double Ly)
+        : nx(nx_), ny(ny_),
+        dx(Lx / (nx_ - 1)),
+        dy(Ly / (ny_ - 1)),
+        data(nx_* ny_, 0.0)
     {
-    
     }
 
     double& operator()(int i, int j) { return data[j * nx + i]; }
     const double& operator()(int i, int j) const { return data[j * nx + i]; }
 };
 
-void applyBC(
-    Field & u, 
-    Field & v
-    ) 
+void applyBC(Field& u, Field& v)
 {
     int nx = u.nx, ny = u.ny;
 
-    // No-slip on walls
-    for (int i = 0; i < nx; i++) 
+    for (int i = 0; i < nx; i++)
     {
-        u(i, 0) = v(i, 0) = 0.0;
-        u(i, ny - 1) = 1.0;  // lid velocity
+        u(i, ny - 1) = 1.0;
         v(i, ny - 1) = 0.0;
+    }
+
+    for (int i = 0; i < nx; i++)
+    {
+        u(i, 0) = 0.0;
+        v(i, 0) = 0.0;
     }
 
     for (int j = 0; j < ny; j++)
     {
-        u(0, j) = v(0, j) = 0.0;
-        u(nx - 1, j) = v(nx - 1, j) = 0.0;
+        u(0, j) = 0.0;
+        v(0, j) = 0.0;
+        u(nx - 1, j) = 0.0;
+        v(nx - 1, j) = 0.0;
     }
 }
 
-// Normalizes the pressure on the field.
-void normalizePressure(
-    Field & p
-    ) 
+double laplace(const Field& f, int i, int j)
 {
-    double sum = 0.0;
-
-    // Compute the total pressure.
-    for (double val : p.data) 
-        sum += val;
-
-    // Compute the mean pressure.
-    double mean = sum / p.data.size();
-    
-    // Subtract mean from every cell.
-    for ( double & val : p.data) 
-        val -= mean;
+    double h = f.dx;
+    return (
+        f(i + 1, j) +
+        f(i - 1, j) +
+        f(i, j + 1) +
+        f(i, j - 1) -
+        4.0 * f(i, j)
+        ) / (h * h);
 }
 
-int main() {
+void normalizePressure(Field& p)
+{
+    double sum = 0.0;
+    for (double val : p.data) sum += val;
+    double mean = sum / p.data.size();
+    for (double& val : p.data) val -= mean;
+}
 
-    // 
+double divergence(const Field& u, const Field& v, int i, int j)
+{
+    double dx = u.dx;
+    double dy = u.dy;
+
+    double du_dx = (u(i + 1, j) - u(i - 1, j)) / (2.0 * dx);
+    double dv_dy = (v(i, j + 1) - v(i, j - 1)) / (2.0 * dy);
+
+    return du_dx + dv_dy;
+}
+
+double dpdx(const Field& p, int i, int j)
+{
+    return (p(i + 1, j) - p(i - 1, j)) / (2.0 * p.dx);
+}
+
+double dpdy(const Field& p, int i, int j)
+{
+    return (p(i, j + 1) - p(i, j - 1)) / (2.0 * p.dy);
+}
+
+void solvePressurePoisson(
+    Field& p,
+    const Field& uStar,
+    const Field& vStar,
+    int iters,
+    double dt
+)
+{
+    Field pNew = p;
+
+    for (int it = 0; it < iters; ++it)
+    {
+        for (int j = 1; j < p.ny - 1; ++j)
+        {
+            for (int i = 1; i < p.nx - 1; ++i)
+            {
+                double rhs = (1.0 / dt) * divergence(uStar, vStar, i, j);
+                double h = p.dx;
+
+                pNew(i, j) = 0.25 * (
+                    p(i + 1, j) + p(i - 1, j) +
+                    p(i, j + 1) + p(i, j - 1) -
+                    h * h * rhs
+                    );
+            }
+        }
+
+        for (int i = 0; i < p.nx; ++i)
+        {
+            pNew(i, 0) = pNew(i, 1);
+            pNew(i, p.ny - 1) = pNew(i, p.ny - 2);
+        }
+        for (int j = 0; j < p.ny; ++j)
+        {
+            pNew(0, j) = pNew(1, j);
+            pNew(p.nx - 1, j) = pNew(p.nx - 2, j);
+        }
+
+        p.data.swap(pNew.data);
+        normalizePressure(p);
+    }
+}
+
+double computeDivergenceResidual(const Field& u, const Field& v)
+{
+    double maxDiv = 0.0;
+    for (int j = 1; j < u.ny - 1; ++j)
+    {
+        for (int i = 1; i < u.nx - 1; ++i)
+        {
+            double div = std::abs(divergence(u, v, i, j));
+            if (div > maxDiv) maxDiv = div;
+        }
+    }
+    return maxDiv;
+}
+
+int main()
+{
     int nx = 64, ny = 64;
     double Lx = 1.0, Ly = 1.0;
+
+    double Re = 100.0;
+    double nu = 1.0 / Re;   // 0.01
+    double dt = 1e-3;
 
     Field u(nx, ny, Lx, Ly);
     Field v(nx, ny, Lx, Ly);
     Field p(nx, ny, Lx, Ly);
+    Field uStar(nx, ny, Lx, Ly);
+    Field vStar(nx, ny, Lx, Ly);
 
-    applyBoundaryConditions(u, v);
+    applyBC(u, v);
 
-    // TODO:
-    // 1) Sæt en kraft f (fx driven cavity eller body force)
-    // 2) Diskretisér Stokes-ligningerne
-    // 3) Løs for u, v, p iterativt
-    // 4) Enforce ∫ p dΩ = 0 (fx træk middelværdien fra)
+    int maxIter = 5000;
+    for (int iter = 0; iter < maxIter; ++iter)
+    {
+        applyBC(u, v);
 
-    
+        for (int j = 1; j < ny - 1; ++j)
+        {
+            for (int i = 1; i < nx - 1; ++i)
+            {
+                double lap_u = laplace(u, i, j);
+                double lap_v = laplace(v, i, j);
+
+                uStar(i, j) = u(i, j) + dt * nu * lap_u;
+                vStar(i, j) = v(i, j) + dt * nu * lap_v;
+            }
+        }
+
+        applyBC(uStar, vStar);
+
+        solvePressurePoisson(p, uStar, vStar, 200, dt);
+
+        for (int j = 1; j < ny - 1; ++j)
+        {
+            for (int i = 1; i < nx - 1; ++i)
+            {
+                u(i, j) = uStar(i, j) - dt * dpdx(p, i, j);
+                v(i, j) = vStar(i, j) - dt * dpdy(p, i, j);
+            }
+        }
+
+        applyBC(u, v);
+
+        if (iter % 100 == 0)
+        {
+            double R = computeDivergenceResidual(u, v);
+            std::cout << "Iter: " << iter
+                << "   Max divergence = " << R << std::endl;
+        }
+    }
+
+    std::cout << "Done.\n";
     return 0;
 }
