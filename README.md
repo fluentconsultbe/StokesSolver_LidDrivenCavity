@@ -15,10 +15,7 @@ It consists of a square domain filled with a viscous, incompressible fluid, wher
 
 The motion of the lid induces a recirculating flow inside the cavity, generating characteristic vortical structures.
 
-<img width="400" alt="Lid-Driven cavity" src="figures/problem formulation.png" />
-
-1. # 1. 
-![[Pasted image 20260527122321.png]]
+<img width="400" alt="Lid-Driven cavity" src="Figures/problem formulation.png" />
 
 # 2. Assumptions
 
