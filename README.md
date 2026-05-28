@@ -19,32 +19,34 @@ The motion of the lid induces a recirculating flow inside the cavity, generating
 
 # 2. Assumptions
 
-Domain is assumed to be a unit-rectangle:  
+The domain is assumed to be a unit-square:  
 
 $$\Omega = [0,1] \times [0,1]$$
-Boundary conditions:
 
-- Top:  $u = 1, v = 0$ ( The Driven Lid )
-- No-slip on walls: $u = v = 0$
+We are imposing the following boundary conditions:
+
+- Top: $u = 1, v = 0$ ( The Driven Lid )
+- Walls: $u = v = 0$ ( No-slip )
 
 ### Pressure‑normalisation
 
 As the pressure in incompressible Stokes flow is only defined up to an arbitrary constant, we enforce uniqueness by requiring the mean pressure to vanish:
 
-$$\int_\Omega p , d\Omega = 0$$
+$$\int_\Omega p \hspace{3pt} d\Omega = 0$$
 
 # 3. Governing Equations
 
 ### Stokes‑equations:
 
 $$-\nu \nabla^2 \mathbf{u} + \nabla p = 0$$$$\nabla \cdot \mathbf{u} = 0$$
-### Pressure Poisson Equation
 
+### Pressure Poisson Equation
 
 To enforce incompressibility we solve a pressure Poisson equation derived from the projection method. 
 
-$$\nabla^2 p = \frac{1}{\Delta t},\nabla \cdot u^*$$
- in which $u^*$ is the __intermediate velocity field__ obtained after the viscous diffusion step, used to compute the pressure correction that enforces incompressibility.
+$$\nabla^2 p = \frac{1}{\Delta t} \nabla \cdot u^*$$
+
+in which $u^*$ is the __intermediate velocity field__ obtained after performing the viscous diffusion step.
 
 This equation ensures that the corrected velocity field becomes divergence‑free.
 
