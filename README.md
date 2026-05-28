@@ -1,7 +1,5 @@
 # Stokes Solver for  Lid-Driven Cavity
 
-NOTICE!!! Work in progress...
-
 The aim of this project is to develop a C++ Stoke's solver for a Lid-Driven Cavity Flow.
 
 The FEM simulation is developed in C++ using only the standard template library.
@@ -36,38 +34,78 @@ $$\int_\Omega p \hspace{3pt} d\Omega = 0$$
 
 # 3. Governing Equations
 
-### Stokes‑equations:
+The lid‑driven cavity flow is governed by the **steady incompressible Stokes equations**, which describe slow, viscosity‑dominated motion of a Newtonian fluid. The system consists of a momentum balance and the incompressibility constraint:
 
-$$-\nu \nabla^2 \mathbf{u} + \nabla p = 0$$$$\nabla \cdot \mathbf{u} = 0$$
+### Momentum equation
+$$-\nu \nabla^2 \mathbf{u} + \nabla \mathbf{p} = \mathbf{0}$$
 
+### Continuity equation ( incompressibility )
+$$\nabla \cdot \mathbf{u} = 0$$
+
+Here:
+
+- $\mathbf{u}=(u,v)$ is the velocity field
+    
+- $\mathbf{p}$ is the pressure
+    
+- ν is the kinematic viscosity
+---
 ### Pressure Poisson Equation
 
-To enforce incompressibility we solve a pressure Poisson equation derived from the projection method. 
+To enforce incompressibility numerically, the solver uses a **projection method**.  
+First, an intermediate velocity field $\mathbf{u}^*$ is computed by applying only the viscous diffusion step:
 
-$$\nabla^2 p = \frac{1}{\Delta t} \nabla \cdot u^*$$
+$$\mathbf{u}^* = \mathbf{u}^n + \Delta t \hspace{2pt} \nu \nabla^2 \mathbf{u}^n$$
 
-in which $u^*$ is the __intermediate velocity field__ obtained after performing the viscous diffusion step.
+This intermediate field generally **does not** satisfy the divergence‑free condition.  
+To correct this, we solve the **pressure Poisson equation**:
 
-This equation ensures that the corrected velocity field becomes divergence‑free.
+$$\nabla^2 p = \frac{1}{\Delta t} \nabla \cdot \mathbf{u}^*$$
 
-The resulting linear system is iteratively solved using __Gauss–Seidel__ relaxation. Once the pressure field is updated, the velocity is projected onto a solenoidal, aka divergence-free, field:
+Solving this equation yields a pressure field that enforces incompressibility.
 
-$$u = u^* - \Delta t,\frac{\partial p}{\partial x}, \qquad v = v^* - \Delta t,\frac{\partial p}{\partial y}$$
+---
+## Velocity Projection
 
-This projection step enforces the incompressibility condition $\nabla \cdot u = 0$ and yields a physically consistent Stokes flow solution.
+Once the pressure field is obtained, the velocity is projected onto a **solenoidal** (divergence‑free) field:
+
+$$u = u^* - \Delta t \frac{\partial p}{\partial x}, \qquad v = v^* - \Delta t \frac{\partial p}{\partial y}$$
+
+This projection step ensures:
+
+$$\nabla \cdot \mathbf{u} = 0$$
+
+and produces a physically consistent Stokes flow solution.
+
+---
+
+### Numerical Solution of the Poisson Equation
+
+The pressure Poisson equation forms a large sparse linear system.  
+In this solver, it is iteratively approximated using **Gauss–Seidel relaxation**, which updates each pressure value based on its neighbours:
+
+$$p_{i,j}^{(k+1)} = \frac{1}{4} \left( p_{i+1,j}^{(k)} + p_{i-1,j}^{(k)} + p_{i,j+1}^{(k)} + p_{i,j-1}^{(k)}
+
+- h^2\hspace{2pt} \text{rhs}_{i,j} \right)$$
+
+where:
+
+$$\text{rhs}_{i,j} = \frac{1}{\Delta t} \nabla \cdot \mathbf{u}^*_{i,j}$$
+
+Repeated sweeps drive the solution toward the correct pressure field.
 
 # 4. Discretization
 
-We will construct a 2D‑grid with similar element distances, $h$, in both directions.
+We construct a uniform 2D grid with equal spacing, $h$, in both the x- and y-directions.
 
-The Laplacianen in  2D is:
+The Laplacian in  2D is:
 
 $$\nabla^2 u = \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2}$$
 
-We will use a 5-points Laplace-operator with central difference given by: 
+We approximate this operator using the **five‑point central‑difference stencil**:
 
 $$\nabla^2 u_{i,j} \approx \frac{u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1} - 4u_{i,j}}{h^2}$$
 
-This operator uses the center point of the current grid elements plus its four neighbours, aka left, right, up and down.
+This stencil uses the value at the current grid point $(i,j)$ and its four direct neighbours (left, right, top, bottom). 
 
-The formula for the field, $v_{i,j}$ is similar.
+The same discretization is applied to the second component of the velocity field, $v_{i,j}$.
