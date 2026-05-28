@@ -10,7 +10,10 @@ The code is provided in the _StokesSolver_ subfolder in the form of a CMake buil
 
 # 1. Problem Formulation
 
-Draw Lid driven cavity bla bla.
+The lid‑driven cavity is a classical benchmark problem in incompressible fluid dynamics.
+It consists of a square domain filled with a viscous, incompressible fluid, where the top boundary (the “lid”) moves with a constant horizontal velocity while all other walls remain stationary. 
+
+The motion of the lid induces a recirculating flow inside the cavity, generating characteristic vortical structures.
 
 1. # 1. 
 ![[Pasted image 20260527122321.png]]
