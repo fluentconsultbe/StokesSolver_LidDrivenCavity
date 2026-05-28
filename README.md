@@ -50,7 +50,7 @@ in which $u^*$ is the __intermediate velocity field__ obtained after performing 
 
 This equation ensures that the corrected velocity field becomes divergence‑free.
 
-I discretize the Laplacian using a standard 5‑point finite‑difference stencil on a uniform grid, and solve the resulting linear system iteratively using Gauss–Seidel relaxation. Once the pressure field is updated, the velocity is projected onto a solenoidal field:
+The resulting linear system is iteratively solved using __Gauss–Seidel__ relaxation. Once the pressure field is updated, the velocity is projected onto a solenoidal, aka divergence-free, field:
 
 $$u = u^* - \Delta t,\frac{\partial p}{\partial x}, \qquad v = v^* - \Delta t,\frac{\partial p}{\partial y}$$
 
